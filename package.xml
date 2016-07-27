@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="2">
+  <description> RViz panels and displays for Mobile Robot Operating Panel (MROP). </description>
+  <name>mrop_gui</name>
+  <version>1.0.0</version>
+  <maintainer email="inz.mateusz.przybyla@gmail.com">Mateusz Przybyla</maintainer>
+  <author>Mateusz Przybyla</author>
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <depend>tf</depend>
+  <depend>joy</depend>
+  <depend>rviz</depend>
+  <depend>roscpp</depend>  
+  <depend>geometry_msgs</depend>
+
+  <export>
+    <rviz plugin="${prefix}/plugin_description.xml"/>
+  </export>
+
+</package>
+
