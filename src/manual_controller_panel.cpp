@@ -35,18 +35,19 @@
 
 #include "manual_controller_panel.h"
 
-namespace mtracker_gui
+namespace mrop_gui
 {
 
-ManualControllerPanel::ManualControllerPanel(QWidget* parent) : rviz::Panel(parent), nh_(""), k_v_(0.4), k_w_(1.5) {
-  trigger_cli_ = nh_.serviceClient<mtracker::Trigger>("manual_controller_trigger_srv");
-  params_cli_ = nh_.serviceClient<mtracker::Params>("manual_controller_params_srv");
+ManualControllerPanel::ManualControllerPanel(QWidget* parent) : rviz::Panel(parent), nh_(""), nh_local_("manual_controller") {
+  getParams();
+
+  params_cli_ = nh_local_.serviceClient<std_srvs::Empty>("params");
   keys_pub_ = nh_.advertise<geometry_msgs::Twist>("keys", 10);
 
   std::fill_n(keys_, 4, 0.0);
 
   activate_checkbox_ = new QCheckBox("On/Off");
-  activate_checkbox_->setChecked(false);
+  activate_checkbox_->setChecked(p_active_);
 
   joy_button_   = new QPushButton("Joy");
   keys_button_  = new QPushButton("Keys");
@@ -59,36 +60,36 @@ ManualControllerPanel::ManualControllerPanel(QWidget* parent) : rviz::Panel(pare
   joy_button_->setCheckable(true);
   joy_button_->setMinimumSize(50, 50);
   joy_button_->setMaximumSize(50, 50);
-  joy_button_->setEnabled(false);
+  joy_button_->setEnabled(p_active_ && p_use_joy_);
 
   keys_button_->setCheckable(true);
   keys_button_->setMinimumSize(50, 50);
   keys_button_->setMaximumSize(50, 50);
-  keys_button_->setEnabled(false);
+  keys_button_->setEnabled(p_active_ && p_use_keys_);
 
   up_button_->setMinimumSize(50, 50);
   up_button_->setMaximumSize(50, 50);
-  up_button_->setEnabled(false);
+  up_button_->setEnabled(p_active_ && p_use_keys_);
 
   down_button_->setMinimumSize(50, 50);
   down_button_->setMaximumSize(50, 50);
-  down_button_->setEnabled(false);
+  down_button_->setEnabled(p_active_ && p_use_keys_);
 
   left_button_->setMinimumSize(50, 50);
   left_button_->setMaximumSize(50, 50);
-  left_button_->setEnabled(false);
+  left_button_->setEnabled(p_active_ && p_use_keys_);
 
   right_button_->setMinimumSize(50, 50);
   right_button_->setMaximumSize(50, 50);
-  right_button_->setEnabled(false);
+  right_button_->setEnabled(p_active_ && p_use_keys_);
 
-  set_button_->setEnabled(false);
+  set_button_->setEnabled(p_active_);
 
-  k_v_input_ = new QLineEdit("0.4");
-  k_v_input_->setEnabled(false);
+  k_v_input_ = new QLineEdit(QString::number(p_linear_gain_));
+  k_v_input_->setEnabled(p_active_);
 
-  k_w_input_ = new QLineEdit("1.5");
-  k_w_input_->setEnabled(false);
+  k_w_input_ = new QLineEdit(QString::number(p_angular_gain_));
+  k_w_input_->setEnabled(p_active_);
 
   QSpacerItem* margin = new QSpacerItem(1, 1, QSizePolicy::Expanding, QSizePolicy::Fixed);
 
@@ -119,64 +120,65 @@ ManualControllerPanel::ManualControllerPanel(QWidget* parent) : rviz::Panel(pare
   setLayout(layout);
 
   connect(activate_checkbox_, SIGNAL(clicked(bool)), this, SLOT(trigger(bool)));
-  connect(joy_button_, SIGNAL(clicked()), this, SLOT(updateParams()));
+  connect(set_button_, SIGNAL(clicked()), this, SLOT(setParamsButton()));
+  connect(joy_button_, SIGNAL(clicked(bool)), this, SLOT(switchJoy(bool)));
   connect(keys_button_, SIGNAL(clicked(bool)), this, SLOT(switchKeys(bool)));
-  connect(set_button_, SIGNAL(clicked()), this, SLOT(updateParams()));
 }
 
 void ManualControllerPanel::trigger(bool checked) {
-  mtracker::Trigger trigger;
-  trigger.request.activate = checked;
+  p_active_ = checked;
+  setParams();
 
-  if (trigger_cli_.call(trigger)) {
-    if (checked) {
-      joy_button_->setEnabled(true);
-      keys_button_->setEnabled(true);
-      set_button_->setEnabled(true);
-      k_v_input_->setEnabled(true);
-      k_w_input_->setEnabled(true);
-    }
-    else {
-      joy_button_->setEnabled(false);
-      keys_button_->setEnabled(false);
-      set_button_->setEnabled(false);
-      up_button_->setEnabled(false);
-      down_button_->setEnabled(false);
-      left_button_->setEnabled(false);
-      right_button_->setEnabled(false);
-      k_v_input_->setEnabled(false);
-      k_w_input_->setEnabled(false);
+  if (p_active_ && notifyParamsUpdate()) {
+    joy_button_->setEnabled(true);
+    keys_button_->setEnabled(true);
+    set_button_->setEnabled(true);
+    k_v_input_->setEnabled(true);
+    k_w_input_->setEnabled(true);
 
-      std::fill_n(keys_, 4, 0.0);
-      keys_pub_.publish(geometry_msgs::Twist());
+    if (p_use_joy_)
+      joy_button_->setChecked(true);
+
+    if (p_use_keys_) {
+      keys_button_->setChecked(true);
+      up_button_->setEnabled(true);
+      down_button_->setEnabled(true);
+      left_button_->setEnabled(true);
+      right_button_->setEnabled(true);
     }
   }
   else {
-    activate_checkbox_->setChecked(!checked);
+    joy_button_->setEnabled(false);
+    keys_button_->setEnabled(false);
+    set_button_->setEnabled(false);
+    up_button_->setEnabled(false);
+    down_button_->setEnabled(false);
+    left_button_->setEnabled(false);
+    right_button_->setEnabled(false);
+    k_v_input_->setEnabled(false);
+    k_w_input_->setEnabled(false);
+
+    std::fill_n(keys_, 4, 0.0);
+    keys_pub_.publish(geometry_msgs::Twist());
   }
 }
 
-void ManualControllerPanel::updateParams() {
-  mtracker::Params params;
-  params.request.params.resize(4, 0.0);
+void ManualControllerPanel::setParamsButton() {
+  setParams();
+  notifyParamsUpdate();
+}
 
-  if (!verifyInputs())
-    return;
+void ManualControllerPanel::switchJoy(bool checked) {
+  p_use_joy_ = checked;
 
-  params.request.params[0] = k_v_;
-  params.request.params[1] = k_w_;
-
-  if (joy_button_->isChecked())
-    params.request.params[2] = 1.0;
-
-  if (keys_button_->isChecked())
-    params.request.params[3] = 1.0;
-
-  params_cli_.call(params);
+  setParams();
+  notifyParamsUpdate();
 }
 
 void ManualControllerPanel::switchKeys(bool checked) {
-  if (checked) {
+  p_use_keys_ = checked;
+
+  if (p_use_keys_) {
     up_button_->setEnabled(true);
     down_button_->setEnabled(true);
     left_button_->setEnabled(true);
@@ -192,25 +194,48 @@ void ManualControllerPanel::switchKeys(bool checked) {
     keys_pub_.publish(geometry_msgs::Twist());
   }
 
-  updateParams();
+  setParams();
+  notifyParamsUpdate();
+}
+
+void ManualControllerPanel::setParams() {
+  verifyInputs();
+
+  nh_local_.setParam("active", p_active_);
+  nh_local_.setParam("use_joy", p_use_joy_);
+  nh_local_.setParam("use_keys", p_use_keys_);
+
+  nh_local_.setParam("linear_gain", p_linear_gain_);
+  nh_local_.setParam("angular_gain", p_angular_gain_);
+}
+
+void ManualControllerPanel::getParams() {
+  nh_local_.param<bool>("active", p_active_, true);
+  nh_local_.param<bool>("use_joy", p_use_joy_, true);
+  nh_local_.param<bool>("use_keys", p_use_keys_, false);
+
+  nh_local_.param<double>("linear_gain", p_linear_gain_, 0.25);
+  nh_local_.param<double>("angular_gain", p_angular_gain_, 1.0);
+}
+
+bool ManualControllerPanel::notifyParamsUpdate() {
+  std_srvs::Empty empty;
+  return params_cli_.call(empty);
 }
 
 bool ManualControllerPanel::verifyInputs() {
-  try { k_v_ = boost::lexical_cast<double>(k_v_input_->text().toStdString()); }
-  catch(boost::bad_lexical_cast &) { k_v_ = 0.0; k_v_input_->setText(":-("); return false; }
+  try { p_linear_gain_ = boost::lexical_cast<double>(k_v_input_->text().toStdString()); }
+  catch(boost::bad_lexical_cast &) { p_linear_gain_ = 0.0; k_v_input_->setText("0.0"); return false; }
 
-  try { k_w_ = boost::lexical_cast<double>(k_w_input_->text().toStdString()); }
-  catch(boost::bad_lexical_cast &) { k_w_ = 0.0; k_w_input_->setText(":-("); return false; }
+  try { p_angular_gain_ = boost::lexical_cast<double>(k_w_input_->text().toStdString()); }
+  catch(boost::bad_lexical_cast &) { p_angular_gain_ = 0.0; k_w_input_->setText("0.0"); return false; }
 
   return true;
 }
 
 void ManualControllerPanel::keyPressEvent(QKeyEvent * e) {
-  if (keys_button_->isChecked()) {
+  if (p_active_ && p_use_keys_) {
     geometry_msgs::Twist keys;
-
-    if (!verifyInputs())
-      return;
 
     if (e->key() == Qt::Key_W || e->key() == Qt::Key_Up) {
       up_button_->setDown(true);
@@ -229,19 +254,16 @@ void ManualControllerPanel::keyPressEvent(QKeyEvent * e) {
       keys_[3] = 1;
     }
 
-    keys.linear.x = k_v_ * (keys_[0] - keys_[2]);
-    keys.angular.z = k_w_ * (keys_[1] - keys_[3]);
+    keys.linear.x = keys_[0] - keys_[2];
+    keys.angular.z = keys_[1] - keys_[3];
 
     keys_pub_.publish(keys);
   }
 }
 
 void ManualControllerPanel::keyReleaseEvent(QKeyEvent * e) {
-  if (keys_button_->isChecked()) {
+  if (p_active_ && p_use_keys_ && !e->isAutoRepeat()) {
     geometry_msgs::Twist keys;
-
-    if (!verifyInputs())
-      return;
 
     if (e->key() == Qt::Key_W || e->key() == Qt::Key_Up) {
       up_button_->setDown(false);
@@ -260,13 +282,12 @@ void ManualControllerPanel::keyReleaseEvent(QKeyEvent * e) {
       keys_[3] = 0;
     }
 
-    keys.linear.x = k_v_ * (keys_[0] - keys_[2]);
-    keys.angular.z = k_w_ * (keys_[1] - keys_[3]);
+    keys.linear.x = keys_[0] - keys_[2];
+    keys.angular.z = keys_[1] - keys_[3];
 
     keys_pub_.publish(keys);
   }
 }
-
 
 void ManualControllerPanel::save(rviz::Config config) const {
   rviz::Panel::save(config);
@@ -276,7 +297,7 @@ void ManualControllerPanel::load(const rviz::Config& config) {
   rviz::Panel::load(config);
 }
 
-} // end namespace mtracker_gui
+} // end namespace mrop_gui
 
 #include <pluginlib/class_list_macros.h>
-PLUGINLIB_EXPORT_CLASS(mtracker_gui::ManualControllerPanel, rviz::Panel)
+PLUGINLIB_EXPORT_CLASS(mrop_gui::ManualControllerPanel, rviz::Panel)

@@ -35,12 +35,12 @@
 
 #include "reference_generator_panel.h"
 
-namespace mtracker_gui
+namespace mrop_gui
 {
 
 ReferenceGeneratorPanel::ReferenceGeneratorPanel(QWidget* parent) : rviz::Panel(parent), nh_("") {
-  trigger_cli_ = nh_.serviceClient<mtracker::Trigger>("reference_generator_trigger_srv");
-  params_cli_ = nh_.serviceClient<mtracker::Params>("reference_generator_params_srv");
+  trigger_cli_ = nh_.serviceClient<std_srvs::Trigger>("reference_generator_trigger_srv");
+  params_cli_ = nh_.serviceClient<std_srvs::Empty>("reference_generator_params_srv");
 
   activate_checkbox_ = new QCheckBox("On/Off");
   activate_checkbox_->setChecked(false);
@@ -55,19 +55,19 @@ ReferenceGeneratorPanel::ReferenceGeneratorPanel(QWidget* parent) : rviz::Panel(
   stop_button_->setMinimumSize(50, 50);
   stop_button_->setMaximumSize(50, 50);
   stop_button_->setEnabled(false);
-  stop_button_->setIcon(QIcon("/home/tysik/workspace/catkin_ws/src/mtracker_gui/resources/stop.png"));
+  stop_button_->setIcon(QIcon("/home/ksis/catkin_ws/src/mrop_gui/resources/stop.png"));
   stop_button_->setIconSize(QSize(25, 25));
 
   pause_button_->setMinimumSize(50, 50);
   pause_button_->setMaximumSize(50, 50);
   pause_button_->setEnabled(false);
-  pause_button_->setIcon(QIcon("/home/tysik/workspace/catkin_ws/src/mtracker_gui/resources/pause.png"));
+  pause_button_->setIcon(QIcon("home/ksis/catkin_ws/src/mrop_gui/resources/pause.png"));
   pause_button_->setIconSize(QSize(25, 25));
 
   play_button_->setMinimumSize(50, 50);
   play_button_->setMaximumSize(50, 50);
   play_button_->setEnabled(false);
-  play_button_->setIcon(QIcon("/home/tysik/workspace/catkin_ws/src/mtracker_gui/resources/play.png"));
+  play_button_->setIcon(QIcon("home/ksis/catkin_ws/src/mrop_gui/resources/play.png"));
   play_button_->setIconSize(QSize(25, 25));
 
   QSpacerItem* margin = new QSpacerItem(1, 1, QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -163,11 +163,10 @@ ReferenceGeneratorPanel::ReferenceGeneratorPanel(QWidget* parent) : rviz::Panel(
 }
 
 void ReferenceGeneratorPanel::trigger(bool checked) {
-  mtracker::Trigger trigger;
-  trigger.request.activate = checked;
+  std_srvs::Trigger trigger;
 
   if (trigger_cli_.call(trigger)) {
-    if (checked) {
+    if (trigger.response.success) {
       stop_button_->setEnabled(true);
       pause_button_->setEnabled(true);
       play_button_->setEnabled(true);
@@ -201,93 +200,93 @@ void ReferenceGeneratorPanel::trigger(bool checked) {
 }
 
 void ReferenceGeneratorPanel::updateParams() {
-  mtracker::Params params;
-  params.request.params.resize(13, 0);
+//  mtracker::Params params;
+//  params.request.params.resize(13, 0);
 
-  stop_button_->setEnabled(false);
-  pause_button_->setEnabled(true);
-  play_button_->setEnabled(true);
+//  stop_button_->setEnabled(false);
+//  pause_button_->setEnabled(true);
+//  play_button_->setEnabled(true);
 
-  params.request.params[2] = 1.0;   // Update traj. params
+//  params.request.params[2] = 1.0;   // Update traj. params
 
-  QString traj_type = trajectories_list_->currentText();
-  if (traj_type == "Point")
-    params.request.params[3] = 0.0;
-  else if (traj_type == "Linear")
-    params.request.params[3] = 1.0;
-  else if (traj_type == "Harmonic")
-    params.request.params[3] = 2.0;
-  else if (traj_type == "Lemniscate")
-    params.request.params[3] = 3.0;
+//  QString traj_type = trajectories_list_->currentText();
+//  if (traj_type == "Point")
+//    params.request.params[3] = 0.0;
+//  else if (traj_type == "Linear")
+//    params.request.params[3] = 1.0;
+//  else if (traj_type == "Harmonic")
+//    params.request.params[3] = 2.0;
+//  else if (traj_type == "Lemniscate")
+//    params.request.params[3] = 3.0;
 
-  try {params.request.params[4] = boost::lexical_cast<double>(x_input_->text().toStdString()); }
-  catch(boost::bad_lexical_cast &){ x_input_->setText(":-("); return; }
+//  try {params.request.params[4] = boost::lexical_cast<double>(x_input_->text().toStdString()); }
+//  catch(boost::bad_lexical_cast &){ x_input_->setText(":-("); return; }
 
-  try {params.request.params[5] = boost::lexical_cast<double>(y_input_->text().toStdString()); }
-  catch(boost::bad_lexical_cast &){ y_input_->setText(":-("); return; }
+//  try {params.request.params[5] = boost::lexical_cast<double>(y_input_->text().toStdString()); }
+//  catch(boost::bad_lexical_cast &){ y_input_->setText(":-("); return; }
 
-  try {params.request.params[6] = boost::lexical_cast<double>(theta_input_->text().toStdString()); }
-  catch(boost::bad_lexical_cast &){ theta_input_->setText(":-("); return; }
+//  try {params.request.params[6] = boost::lexical_cast<double>(theta_input_->text().toStdString()); }
+//  catch(boost::bad_lexical_cast &){ theta_input_->setText(":-("); return; }
 
-  try {params.request.params[7] = boost::lexical_cast<double>(v_input_->text().toStdString()); }
-  catch(boost::bad_lexical_cast &){ v_input_->setText(":-("); return; }
+//  try {params.request.params[7] = boost::lexical_cast<double>(v_input_->text().toStdString()); }
+//  catch(boost::bad_lexical_cast &){ v_input_->setText(":-("); return; }
 
-  try {params.request.params[8] = boost::lexical_cast<double>(T_input_->text().toStdString()); }
-  catch(boost::bad_lexical_cast &){ T_input_->setText(":-("); return; }
+//  try {params.request.params[8] = boost::lexical_cast<double>(T_input_->text().toStdString()); }
+//  catch(boost::bad_lexical_cast &){ T_input_->setText(":-("); return; }
 
-  try {params.request.params[9] = boost::lexical_cast<double>(Rx_input_->text().toStdString()); }
-  catch(boost::bad_lexical_cast &){ Rx_input_->setText(":-("); return; }
+//  try {params.request.params[9] = boost::lexical_cast<double>(Rx_input_->text().toStdString()); }
+//  catch(boost::bad_lexical_cast &){ Rx_input_->setText(":-("); return; }
 
-  try {params.request.params[10] = boost::lexical_cast<double>(Ry_input_->text().toStdString()); }
-  catch(boost::bad_lexical_cast &){ Ry_input_->setText(":-("); return; }
+//  try {params.request.params[10] = boost::lexical_cast<double>(Ry_input_->text().toStdString()); }
+//  catch(boost::bad_lexical_cast &){ Ry_input_->setText(":-("); return; }
 
-  try {params.request.params[11] = boost::lexical_cast<double>(nx_input_->text().toStdString()); }
-  catch(boost::bad_lexical_cast &){ nx_input_->setText(":-("); return; }
+//  try {params.request.params[11] = boost::lexical_cast<double>(nx_input_->text().toStdString()); }
+//  catch(boost::bad_lexical_cast &){ nx_input_->setText(":-("); return; }
 
-  try {params.request.params[12] = boost::lexical_cast<double>(ny_input_->text().toStdString()); }
-  catch(boost::bad_lexical_cast &){ ny_input_->setText(":-("); return; }
+//  try {params.request.params[12] = boost::lexical_cast<double>(ny_input_->text().toStdString()); }
+//  catch(boost::bad_lexical_cast &){ ny_input_->setText(":-("); return; }
 
-  params_cli_.call(params);
+//  params_cli_.call(params);
 }
 
 void ReferenceGeneratorPanel::stop() {
-  mtracker::Params params;
-  params.request.params.resize(13, 0);
-  params.request.params[0] = 0.0; // start = false
-  params.request.params[1] = 0.0; // pause = false
+//  mtracker::Params params;
+//  params.request.params.resize(13, 0);
+//  params.request.params[0] = 0.0; // start = false
+//  params.request.params[1] = 0.0; // pause = false
 
-  if (params_cli_.call(params)) {
-    stop_button_->setEnabled(false);
-    pause_button_->setEnabled(true);
-    play_button_->setEnabled(true);
-  }
+//  if (params_cli_.call(params)) {
+//    stop_button_->setEnabled(false);
+//    pause_button_->setEnabled(true);
+//    play_button_->setEnabled(true);
+//  }
 }
 
 void ReferenceGeneratorPanel::pause() {
-  mtracker::Params params;
-  params.request.params.resize(13, 0.0);
-  params.request.params[0] = 0.0;
-  params.request.params[1] = 1.0;
+//  mtracker::Params params;
+//  params.request.params.resize(13, 0.0);
+//  params.request.params[0] = 0.0;
+//  params.request.params[1] = 1.0;
 
-  if (params_cli_.call(params)) {
-    stop_button_->setEnabled(true);
-    pause_button_->setEnabled(false);
-    play_button_->setEnabled(true);
-  }
+//  if (params_cli_.call(params)) {
+//    stop_button_->setEnabled(true);
+//    pause_button_->setEnabled(false);
+//    play_button_->setEnabled(true);
+//  }
 }
 
 void ReferenceGeneratorPanel::start() {
-  mtracker::Params params;
-  params.request.params.resize(13, 0.0);
-  params.request.params[0] = 1.0;
-  params.request.params[1] = 0.0;
+//  mtracker::Params params;
+//  params.request.params.resize(13, 0.0);
+//  params.request.params[0] = 1.0;
+//  params.request.params[1] = 0.0;
 
 
-  if (params_cli_.call(params)) {
-    stop_button_->setEnabled(true);
-    pause_button_->setEnabled(true);
-    play_button_->setEnabled(false);
-  }
+//  if (params_cli_.call(params)) {
+//    stop_button_->setEnabled(true);
+//    pause_button_->setEnabled(true);
+//    play_button_->setEnabled(false);
+//  }
 }
 
 void ReferenceGeneratorPanel::chooseTrajectory(QString traj_type) {
@@ -334,7 +333,7 @@ void ReferenceGeneratorPanel::load(const rviz::Config& config) {
   rviz::Panel::load(config);
 }
 
-} // end namespace mtracker_gui
+} // end namespace mrop_gui
 
 #include <pluginlib/class_list_macros.h>
-PLUGINLIB_EXPORT_CLASS(mtracker_gui::ReferenceGeneratorPanel, rviz::Panel)
+PLUGINLIB_EXPORT_CLASS(mrop_gui::ReferenceGeneratorPanel, rviz::Panel)

@@ -35,12 +35,12 @@
 
 #include "state_estimator_panel.h"
 
-namespace mtracker_gui
+namespace mrop_gui
 {
 
 StateEstimatorPanel::StateEstimatorPanel(QWidget* parent) : rviz::Panel(parent), nh_("") {
-  trigger_cli_ = nh_.serviceClient<mtracker::Trigger>("state_estimator_trigger_srv");
-  params_cli_ = nh_.serviceClient<mtracker::Params>("state_estimator_params_srv");
+  trigger_cli_ = nh_.serviceClient<std_srvs::Trigger>("state_estimator_trigger_srv");
+  params_cli_ = nh_.serviceClient<std_srvs::Empty>("state_estimator_params_srv");
 
   activate_checkbox_ = new QCheckBox("On/Off");
   activate_checkbox_->setChecked(false);
@@ -53,11 +53,10 @@ StateEstimatorPanel::StateEstimatorPanel(QWidget* parent) : rviz::Panel(parent),
 }
 
 void StateEstimatorPanel::trigger(bool checked) {
-  mtracker::Trigger trigger;
-  trigger.request.activate = checked;
+  std_srvs::Trigger trigger;
 
   if (trigger_cli_.call(trigger)) {
-    if (checked) {
+    if (trigger.response.success) {
       //
     }
     else {
@@ -77,7 +76,7 @@ void StateEstimatorPanel::load(const rviz::Config& config) {
   rviz::Panel::load(config);
 }
 
-} // end namespace mtracker_gui
+} // end namespace mrop_gui
 
 #include <pluginlib/class_list_macros.h>
-PLUGINLIB_EXPORT_CLASS(mtracker_gui::StateEstimatorPanel, rviz::Panel)
+PLUGINLIB_EXPORT_CLASS(mrop_gui::StateEstimatorPanel, rviz::Panel)

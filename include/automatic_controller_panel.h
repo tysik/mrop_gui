@@ -40,13 +40,13 @@
 
 #include <ros/ros.h>
 #include <rviz/panel.h>
-#include <mtracker/Trigger.h>
-#include <mtracker/Params.h>
+#include <std_srvs/Empty.h>
+#include <std_srvs/Trigger.h>
 
 #include <QCheckBox>
 #include <QVBoxLayout>
 
-namespace mtracker_gui
+namespace mrop_gui
 {
 
 class AutomaticControllerPanel : public rviz::Panel
@@ -65,8 +65,10 @@ private:
   QCheckBox* activate_checkbox_;
 
   ros::NodeHandle nh_;
+  ros::NodeHandle nh_local_;
+
   ros::ServiceClient trigger_cli_;
   ros::ServiceClient params_cli_;
 };
 
-} // end namespace mtracker_gui
+} // end namespace mrop_gui

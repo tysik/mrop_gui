@@ -40,8 +40,8 @@
 
 #include <ros/ros.h>
 #include <rviz/panel.h>
-#include <mtracker/Trigger.h>
-#include <mtracker/Params.h>
+#include <std_srvs/Empty.h>
+#include <std_srvs/Trigger.h>
 
 #include <QCheckBox>
 #include <QLabel>
@@ -51,7 +51,7 @@
 #include <QPushButton>
 #include <QComboBox>
 
-namespace mtracker_gui
+namespace mrop_gui
 {
 
 class ReferenceGeneratorPanel : public rviz::Panel
@@ -96,4 +96,4 @@ private:
   ros::ServiceClient params_cli_;
 };
 
-} // end namespace mtracker_gui
+} // end namespace mrop_gui

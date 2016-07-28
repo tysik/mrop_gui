@@ -19,7 +19,7 @@ catkin_package(
 
 qt4_wrap_cpp(MOC_FILES
 #  include/mtracker_panel.h
-#  include/manual_controller_panel.h
+  include/manual_controller_panel.h
 #  include/automatic_controller_panel.h
 #  include/obstacle_controller_panel.h
 #  include/controls_scaling_panel.h
@@ -27,12 +27,12 @@ qt4_wrap_cpp(MOC_FILES
 #  include/simulator_panel.h
 #  include/state_estimator_panel.h
 #  include/data_recorder_panel.h
-  include/path_display.h
+#  include/path_display.h
 )
 
 set(SOURCE_FILES
 #  src/mtracker_panel.cpp
-#  src/manual_controller_panel.cpp
+  src/manual_controller_panel.cpp
 #  src/automatic_controller_panel.cpp
 #  src/obstacle_controller_panel.cpp
 #  src/controls_scaling_panel.cpp
@@ -40,11 +40,11 @@ set(SOURCE_FILES
 #  src/simulator_panel.cpp
 #  src/state_estimator_panel.cpp
 #  src/data_recorder_panel.cpp
-  src/path_display.cpp
-  src/pose_visual.cpp
+#  src/path_display.cpp
+#  src/pose_visual.cpp
 
 #  include/mtracker_panel.h
-#  include/manual_controller_panel.h
+  include/manual_controller_panel.h
 #  include/automatic_controller_panel.h
 #  include/obstacle_controller_panel.h
 #  include/controls_scaling_panel.h
@@ -52,8 +52,8 @@ set(SOURCE_FILES
 #  include/simulator_panel.h
 #  include/state_estimator_panel.h
 #  include/data_recorder_panel.h
-  include/path_display.h
-  include/pose_visual.h
+#  include/path_display.h
+#  include/pose_visual.h
   ${MOC_FILES}
 )
 

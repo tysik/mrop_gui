@@ -35,12 +35,12 @@
 
 #include "simulator_panel.h"
 
-namespace mtracker_gui
+namespace mrop_gui
 {
 
 SimulatorPanel::SimulatorPanel(QWidget* parent) : rviz::Panel(parent), nh_("") {
-  trigger_cli_ = nh_.serviceClient<mtracker::Trigger>("simulator_trigger_srv");
-  params_cli_ = nh_.serviceClient<mtracker::Params>("simulator_params_srv");
+  trigger_cli_ = nh_.serviceClient<std_srvs::Trigger>("simulator_trigger_srv");
+  params_cli_ = nh_.serviceClient<std_srvs::Empty>("simulator_params_srv");
 
   activate_checkbox_ = new QCheckBox("On/Off");
   activate_checkbox_->setChecked(false);
@@ -73,11 +73,10 @@ SimulatorPanel::SimulatorPanel(QWidget* parent) : rviz::Panel(parent), nh_("") {
 }
 
 void SimulatorPanel::trigger(bool checked) {
-  mtracker::Trigger trigger;
-  trigger.request.activate = checked;
+  std_srvs::Trigger trigger;
 
   if (trigger_cli_.call(trigger)) {
-    if (checked) {
+    if (trigger.response.success) {
       t_f_input_->setEnabled(true);
       t_o_input_->setEnabled(true);
       set_button_->setEnabled(true);
@@ -94,16 +93,16 @@ void SimulatorPanel::trigger(bool checked) {
 }
 
 void SimulatorPanel::updateParams() {
-  mtracker::Params params;
-  params.request.params.resize(2);
+//  mtracker::Params params;
+//  params.request.params.resize(2);
 
-  try {params.request.params[0] = boost::lexical_cast<double>(t_f_input_->text().toStdString()); }
-  catch(boost::bad_lexical_cast &){ t_f_input_->setText(":-("); return; }
+//  try {params.request.params[0] = boost::lexical_cast<double>(t_f_input_->text().toStdString()); }
+//  catch(boost::bad_lexical_cast &){ t_f_input_->setText(":-("); return; }
 
-  try {params.request.params[1] = boost::lexical_cast<double>(t_o_input_->text().toStdString()); }
-  catch(boost::bad_lexical_cast &){ t_o_input_->setText(":-("); return; }
+//  try {params.request.params[1] = boost::lexical_cast<double>(t_o_input_->text().toStdString()); }
+//  catch(boost::bad_lexical_cast &){ t_o_input_->setText(":-("); return; }
 
-  params_cli_.call(params);
+//  params_cli_.call(params);
 }
 
 void SimulatorPanel::save(rviz::Config config) const {
@@ -114,7 +113,7 @@ void SimulatorPanel::load(const rviz::Config& config) {
   rviz::Panel::load(config);
 }
 
-} // end namespace mtracker_gui
+} // end namespace mrop_gui
 
 #include <pluginlib/class_list_macros.h>
-PLUGINLIB_EXPORT_CLASS(mtracker_gui::SimulatorPanel, rviz::Panel)
+PLUGINLIB_EXPORT_CLASS(mrop_gui::SimulatorPanel, rviz::Panel)

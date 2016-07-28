@@ -42,8 +42,8 @@
 #include <ros/ros.h>
 #include <rviz/panel.h>
 #include <geometry_msgs/Twist.h>
-#include <mtracker/Trigger.h>
-#include <mtracker/Params.h>
+#include <std_srvs/Empty.h>
+#include <std_srvs/Trigger.h>
 
 #include <QCheckBox>
 #include <QLineEdit>
@@ -53,7 +53,7 @@
 #include <QPushButton>
 #include <QLabel>
 
-namespace mtracker_gui
+namespace mrop_gui
 {
 
 class ManualControllerPanel: public rviz::Panel
@@ -67,11 +67,16 @@ public:
 
 private Q_SLOTS:
   void trigger(bool checked);
-  void updateParams();
+  void setParamsButton();
+  void switchJoy(bool checked);
   void switchKeys(bool checked);
 
 private:
+  void setParams();
+  void getParams();
+  bool notifyParamsUpdate();
   bool verifyInputs();
+
   void keyPressEvent(QKeyEvent * e);
   void keyReleaseEvent(QKeyEvent * e);
 
@@ -90,12 +95,20 @@ private:
   QLineEdit* k_w_input_;
 
   ros::NodeHandle nh_;
+  ros::NodeHandle nh_local_;
+
   ros::Publisher keys_pub_;
-  ros::ServiceClient trigger_cli_;
   ros::ServiceClient params_cli_;
 
   int keys_[4];
-  double k_v_, k_w_;
+
+  // Parameters
+  bool p_active_;
+  bool p_use_joy_;
+  bool p_use_keys_;
+
+  double p_linear_gain_;   // Linear velocity gain
+  double p_angular_gain_;  // Angular velocity gain
 };
 
-} // end namespace mtracker_gui
+} // end namespace mrop_gui

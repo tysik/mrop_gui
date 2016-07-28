@@ -1,55 +1,39 @@
-<library path="lib/libmtracker_gui">
+<library path="lib/libmrop_gui">
   <!-- Panels -->
   <class name="Reference Generator"
-         type="mtracker_gui::ReferenceGeneratorPanel"
+         type="mrop_gui::ReferenceGeneratorPanel"
          base_class_type="rviz::Panel">
     <description>
       Panel used for activating reference trajectory generation.
     </description>
   </class>
-  
-  <class name="MTracker"
-         type="mtracker_gui::MTrackerPanel"
-         base_class_type="rviz::Panel">
-    <description>
-      Panel used for MTracker settings.
-    </description>
-  </class>
 
   <class name="Manual Controller"
-         type="mtracker_gui::ManualControllerPanel"
+         type="mrop_gui::ManualControllerPanel"
          base_class_type="rviz::Panel">
     <description>
       Panel used for changing the manual controller gains and activating keyboard/joystick inputs.
     </description>
   </class>
 
+  <class name="Manual Controller"
+         type="mrop_gui::ManualControllerPanel"
+         base_class_type="rviz::Panel">
+    <description>
+      Panel used for changing the manual controller gains.
+    </description>
+  </class>
+
   <class name="Automatic Controller"
-         type="mtracker_gui::AutomaticControllerPanel"
+         type="mrop_gui::AutomaticControllerPanel"
          base_class_type="rviz::Panel">
     <description>
       Panel used for changing the automatic controller gains.
     </description>
   </class>
-
-  <class name="Obstacle Controller"
-         type="mtracker_gui::ObstacleControllerPanel"
-         base_class_type="rviz::Panel">
-    <description>
-      Panel used for changing the obstacle controller gains.
-    </description>
-  </class>
-
-  <class name="Controls Scaling"
-         type="mtracker_gui::ControlsScalingPanel"
-         base_class_type="rviz::Panel">
-    <description>
-      Panel used for activating and changing the value of maximal wheel rate.
-    </description>
-  </class>
   
   <class name="Simulator"
-         type="mtracker_gui::SimulatorPanel"
+         type="mrop_gui::SimulatorPanel"
          base_class_type="rviz::Panel">
     <description>
       Panel used for activating simulator.
@@ -57,18 +41,10 @@
   </class>
 
   <class name="State Estimator"
-         type="mtracker_gui::StateEstimatorPanel"
+         type="mrop_gui::StateEstimatorPanel"
          base_class_type="rviz::Panel">
     <description>
       Panel used for activating state estimator.
-    </description>
-  </class>
-  
-  <class name="Data Recorder"
-         type="mtracker_gui::DataRecorderPanel"
-         base_class_type="rviz::Panel">
-    <description>
-      Panel used for activating data recording.
     </description>
   </class>
 

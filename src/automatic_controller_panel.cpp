@@ -35,15 +35,15 @@
 
 #include "automatic_controller_panel.h"
 
-namespace mtracker_gui
+namespace mrop_gui
 {
 
-AutomaticControllerPanel::AutomaticControllerPanel(QWidget* parent) : rviz::Panel(parent), nh_("") {
-  trigger_cli_ = nh_.serviceClient<mtracker::Trigger>("automatic_controller_trigger_srv");
-  params_cli_ = nh_.serviceClient<mtracker::Params>("automatic_controller_params_srv");
+AutomaticControllerPanel::AutomaticControllerPanel(QWidget* parent) : rviz::Panel(parent), nh_(""), nh_local_("automatic_controller") {
+  trigger_cli_ = nh_local_.serviceClient<std_srvs::Trigger>("trigger_srv");
+  params_cli_  = nh_local_.serviceClient<std_srvs::Empty>("params_srv");
 
   activate_checkbox_ = new QCheckBox("On/Off");
-  activate_checkbox_->setChecked(false);
+  activate_checkbox_->setChecked(nh_local_.param<bool>("automatic_controller_active", false));
 
   QVBoxLayout* layout = new QVBoxLayout;
   layout->addWidget(activate_checkbox_);
@@ -53,20 +53,18 @@ AutomaticControllerPanel::AutomaticControllerPanel(QWidget* parent) : rviz::Pane
 }
 
 void AutomaticControllerPanel::trigger(bool checked) {
-  mtracker::Trigger trigger;
-  trigger.request.activate = checked;
+  std_srvs::Trigger trigger;
 
   if (trigger_cli_.call(trigger)) {
-    if (checked) {
-      //
+    if (trigger.response.success) {
+      // Turned on
     }
     else {
-      //
+      // Turned off
     }
   }
-  else {
-    activate_checkbox_->setChecked(!checked);
-  }
+  else
+    activate_checkbox_->setChecked(false);  // Could not resolve connection
 }
 
 void AutomaticControllerPanel::save(rviz::Config config) const {
@@ -77,7 +75,7 @@ void AutomaticControllerPanel::load(const rviz::Config& config) {
   rviz::Panel::load(config);
 }
 
-} // end namespace mtracker_gui
+} // end namespace mrop_gui
 
 #include <pluginlib/class_list_macros.h>
-PLUGINLIB_EXPORT_CLASS(mtracker_gui::AutomaticControllerPanel, rviz::Panel)
+PLUGINLIB_EXPORT_CLASS(mrop_gui::AutomaticControllerPanel, rviz::Panel)
