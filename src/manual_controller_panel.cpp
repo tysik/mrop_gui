@@ -160,6 +160,9 @@ void ManualControllerPanel::trigger(bool checked) {
 
     std::fill_n(keys_, 4, 0.0);
     keys_pub_.publish(geometry_msgs::Twist());
+    activate_checkbox_->setChecked(false);
+    p_active_ = false;
+    setParams();
   }
 }
 
@@ -210,12 +213,12 @@ void ManualControllerPanel::setParams() {
 }
 
 void ManualControllerPanel::getParams() {
-  nh_local_.param<bool>("active", p_active_, true);
-  nh_local_.param<bool>("use_joy", p_use_joy_, true);
+  nh_local_.param<bool>("active", p_active_, false);
+  nh_local_.param<bool>("use_joy", p_use_joy_, false);
   nh_local_.param<bool>("use_keys", p_use_keys_, false);
 
-  nh_local_.param<double>("linear_gain", p_linear_gain_, 0.25);
-  nh_local_.param<double>("angular_gain", p_angular_gain_, 1.0);
+  nh_local_.param<double>("linear_gain", p_linear_gain_, 0.0);
+  nh_local_.param<double>("angular_gain", p_angular_gain_, 0.0);
 }
 
 bool ManualControllerPanel::notifyParamsUpdate() {

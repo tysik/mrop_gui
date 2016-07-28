@@ -41,7 +41,6 @@
 #include <ros/ros.h>
 #include <rviz/panel.h>
 #include <std_srvs/Empty.h>
-#include <std_srvs/Trigger.h>
 
 #include <QCheckBox>
 #include <QLineEdit>
@@ -64,7 +63,13 @@ public:
 
 private Q_SLOTS:
   void trigger(bool checked);
-  void updateParams();
+  void setParamsButton();
+
+private:
+  void setParams();
+  void getParams();
+  bool notifyParamsUpdate();
+  bool verifyInputs();
 
 private:
   QCheckBox* activate_checkbox_;
@@ -73,8 +78,20 @@ private:
   QLineEdit* t_o_input_;
 
   ros::NodeHandle nh_;
-  ros::ServiceClient trigger_cli_;
+  ros::NodeHandle nh_local_;
   ros::ServiceClient params_cli_;
+
+  // Parameters
+  bool p_active_;
+  double p_loop_rate_;
+
+  double p_sampling_time_;
+  double p_time_constant_;
+  double p_time_delay_;
+
+  double p_initial_x_;
+  double p_initial_y_;
+  double p_initial_theta_;
 };
 
 } // end namespace mrop_gui

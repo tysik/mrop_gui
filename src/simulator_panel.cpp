@@ -38,21 +38,22 @@
 namespace mrop_gui
 {
 
-SimulatorPanel::SimulatorPanel(QWidget* parent) : rviz::Panel(parent), nh_("") {
-  trigger_cli_ = nh_.serviceClient<std_srvs::Trigger>("simulator_trigger_srv");
-  params_cli_ = nh_.serviceClient<std_srvs::Empty>("simulator_params_srv");
+SimulatorPanel::SimulatorPanel(QWidget* parent) : rviz::Panel(parent), nh_(""), nh_local_("simulator") {
+  getParams();
+
+  params_cli_ = nh_local_.serviceClient<std_srvs::Empty>("params");
 
   activate_checkbox_ = new QCheckBox("On/Off");
-  activate_checkbox_->setChecked(false);
+  activate_checkbox_->setChecked(p_active_);
 
   set_button_ = new QPushButton("Set");
-  set_button_->setEnabled(false);
+  set_button_->setEnabled(p_active_);
 
-  t_f_input_ = new QLineEdit("0.1");
-  t_f_input_->setEnabled(false);
+  t_f_input_ = new QLineEdit(QString::number(p_time_constant_));
+  t_f_input_->setEnabled(p_active_);
 
-  t_o_input_ = new QLineEdit("0.0");
-  t_o_input_->setEnabled(false);
+  t_o_input_ = new QLineEdit(QString::number(p_time_delay_));
+  t_o_input_->setEnabled(p_active_);
 
   QHBoxLayout* input_layout = new QHBoxLayout;
   input_layout->addWidget(new QLabel("T<sub>f</sub>:"));
@@ -69,40 +70,71 @@ SimulatorPanel::SimulatorPanel(QWidget* parent) : rviz::Panel(parent), nh_("") {
   setLayout(layout);
 
   connect(activate_checkbox_, SIGNAL(clicked(bool)), this, SLOT(trigger(bool)));
-  connect(set_button_, SIGNAL(clicked()), this, SLOT(updateParams()));
+  connect(set_button_, SIGNAL(clicked()), this, SLOT(setParamsButton()));
 }
 
 void SimulatorPanel::trigger(bool checked) {
-  std_srvs::Trigger trigger;
+  p_active_ = checked;
+  setParams();
 
-  if (trigger_cli_.call(trigger)) {
-    if (trigger.response.success) {
-      t_f_input_->setEnabled(true);
-      t_o_input_->setEnabled(true);
-      set_button_->setEnabled(true);
-    }
-    else {
-      t_f_input_->setEnabled(false);
-      t_o_input_->setEnabled(false);
-      set_button_->setEnabled(false);
-    }
+  if (p_active_ && notifyParamsUpdate()) {
+    t_f_input_->setEnabled(true);
+    t_o_input_->setEnabled(true);
+    set_button_->setEnabled(true);
   }
   else {
-    activate_checkbox_->setChecked(!checked);
+    t_f_input_->setEnabled(false);
+    t_o_input_->setEnabled(false);
+    set_button_->setEnabled(false);
+
+    activate_checkbox_->setChecked(false);
+    p_active_ = false;
+    setParams();
   }
 }
 
-void SimulatorPanel::updateParams() {
-//  mtracker::Params params;
-//  params.request.params.resize(2);
 
-//  try {params.request.params[0] = boost::lexical_cast<double>(t_f_input_->text().toStdString()); }
-//  catch(boost::bad_lexical_cast &){ t_f_input_->setText(":-("); return; }
+void SimulatorPanel::setParamsButton() {
+  setParams();
+  notifyParamsUpdate();
+}
 
-//  try {params.request.params[1] = boost::lexical_cast<double>(t_o_input_->text().toStdString()); }
-//  catch(boost::bad_lexical_cast &){ t_o_input_->setText(":-("); return; }
+void SimulatorPanel::setParams() {
+  verifyInputs();
 
-//  params_cli_.call(params);
+  nh_local_.setParam("active", p_active_);
+  nh_local_.setParam("time_constant", p_time_constant_);
+  nh_local_.setParam("time_delay", p_time_delay_);
+
+  nh_local_.setParam("initial_x", p_initial_x_);
+  nh_local_.setParam("initial_y", p_initial_y_);
+  nh_local_.setParam("initial_theta", p_initial_theta_);
+}
+
+void SimulatorPanel::getParams() {
+  nh_local_.param<bool>("active", p_active_, false);
+
+  nh_local_.param<double>("time_constant", p_time_constant_, 0.0);
+  nh_local_.param<double>("time_delay", p_time_delay_, 0.0);
+
+  nh_local_.param<double>("initial_x", p_initial_x_, 0.0);
+  nh_local_.param<double>("initial_y", p_initial_y_, 0.0);
+  nh_local_.param<double>("initial_theta", p_initial_theta_, 0.0);
+}
+
+bool SimulatorPanel::notifyParamsUpdate() {
+  std_srvs::Empty empty;
+  return params_cli_.call(empty);
+}
+
+bool SimulatorPanel::verifyInputs() {
+  try { p_time_constant_ = boost::lexical_cast<double>(t_f_input_->text().toStdString()); }
+  catch(boost::bad_lexical_cast &) { p_time_constant_ = 0.0; t_f_input_->setText("0.0"); return false; }
+
+  try { p_time_delay_ = boost::lexical_cast<double>(t_o_input_->text().toStdString()); }
+  catch(boost::bad_lexical_cast &) { p_time_delay_ = 0.0; t_o_input_->setText("0.0"); return false; }
+
+  return true;
 }
 
 void SimulatorPanel::save(rviz::Config config) const {
