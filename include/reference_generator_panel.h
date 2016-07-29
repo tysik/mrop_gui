@@ -41,7 +41,6 @@
 #include <ros/ros.h>
 #include <rviz/panel.h>
 #include <std_srvs/Empty.h>
-#include <std_srvs/Trigger.h>
 
 #include <QCheckBox>
 #include <QLabel>
@@ -67,9 +66,15 @@ private Q_SLOTS:
   void stop();
   void pause();
   void start();
-  void chooseTrajectory(QString traj_type);
+  void chooseTrajectoryParams(int index);
   void trigger(bool checked);
-  void updateParams();
+  void setParamsButton();
+
+private:
+  void setParams();
+  void getParams();
+  bool notifyParamsUpdate();
+  bool verifyInputs();
 
 private:
   QCheckBox* activate_checkbox_;
@@ -84,16 +89,32 @@ private:
   QLineEdit* theta_input_;
   QLineEdit* v_input_;
   QLineEdit* T_input_;
-  QLineEdit* Rx_input_;
-  QLineEdit* Ry_input_;
-  QLineEdit* nx_input_;
-  QLineEdit* ny_input_;
+  QLineEdit* r_x_input_;
+  QLineEdit* r_y_input_;
+  QLineEdit* n_x_input_;
+  QLineEdit* n_y_input_;
 
   QComboBox* trajectories_list_;
 
   ros::NodeHandle nh_;
-  ros::ServiceClient trigger_cli_;
+  ros::NodeHandle nh_local_;
   ros::ServiceClient params_cli_;
+
+  // Parameters
+  bool p_active_;
+  bool p_paused_;
+  bool p_stopped_;
+
+  int p_trajectory_type_;
+  double p_x_0_;
+  double p_y_0_;
+  double p_theta_0_;
+  double p_v_;
+  double p_T_;
+  double p_r_x_;
+  double p_r_y_;
+  double p_n_x_;
+  double p_n_y_;
 };
 
 } // end namespace mrop_gui

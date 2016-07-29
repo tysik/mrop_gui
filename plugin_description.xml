@@ -4,7 +4,7 @@
          type="mrop_gui::ReferenceGeneratorPanel"
          base_class_type="rviz::Panel">
     <description>
-      Panel used for activating reference trajectory generation.
+      Panel used for activating and setting parameters of reference trajectory.
     </description>
   </class>
 
@@ -12,39 +12,15 @@
          type="mrop_gui::ManualControllerPanel"
          base_class_type="rviz::Panel">
     <description>
-      Panel used for changing the manual controller gains and activating keyboard/joystick inputs.
+      Panel used for activating and setting parameters of manual controller.
     </description>
   </class>
 
-  <class name="Manual Controller"
-         type="mrop_gui::ManualControllerPanel"
-         base_class_type="rviz::Panel">
-    <description>
-      Panel used for changing the manual controller gains.
-    </description>
-  </class>
-
-  <class name="Automatic Controller"
-         type="mrop_gui::AutomaticControllerPanel"
-         base_class_type="rviz::Panel">
-    <description>
-      Panel used for changing the automatic controller gains.
-    </description>
-  </class>
-  
   <class name="Simulator"
          type="mrop_gui::SimulatorPanel"
          base_class_type="rviz::Panel">
     <description>
-      Panel used for activating simulator.
-    </description>
-  </class>
-
-  <class name="State Estimator"
-         type="mrop_gui::StateEstimatorPanel"
-         base_class_type="rviz::Panel">
-    <description>
-      Panel used for activating state estimator.
+      Panel used for activating and setting parameters of simulator.
     </description>
   </class>
 

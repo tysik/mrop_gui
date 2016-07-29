@@ -87,6 +87,8 @@ private:
   QPushButton* right_button_;
   QPushButton* up_button_;
   QPushButton* down_button_;
+  QPushButton* rot_left_button_;
+  QPushButton* rot_right_button_;
   QPushButton* joy_button_;
   QPushButton* keys_button_;
   QPushButton* set_button_;
@@ -100,7 +102,7 @@ private:
   ros::Publisher keys_pub_;
   ros::ServiceClient params_cli_;
 
-  int keys_[4];
+  int keys_[6];
 
   // Parameters
   bool p_active_;

@@ -38,36 +38,42 @@
 namespace mrop_gui
 {
 
-ReferenceGeneratorPanel::ReferenceGeneratorPanel(QWidget* parent) : rviz::Panel(parent), nh_("") {
-  trigger_cli_ = nh_.serviceClient<std_srvs::Trigger>("reference_generator_trigger_srv");
-  params_cli_ = nh_.serviceClient<std_srvs::Empty>("reference_generator_params_srv");
+ReferenceGeneratorPanel::ReferenceGeneratorPanel(QWidget* parent) : rviz::Panel(parent), nh_(""), nh_local_("reference_generator") {
+  params_cli_ = nh_local_.serviceClient<std_srvs::Empty>("params");
+  getParams();
 
   activate_checkbox_ = new QCheckBox("On/Off");
-  activate_checkbox_->setChecked(false);
+  activate_checkbox_->setChecked(p_active_);
 
-  stop_button_  = new QPushButton();
+  stop_button_ = new QPushButton();
   pause_button_ = new QPushButton();
-  play_button_  = new QPushButton();
+  play_button_ = new QPushButton();
 
-  set_button_  = new QPushButton("Set");
-  set_button_->setEnabled(false);
+  set_button_ = new QPushButton("Set");
+  set_button_->setEnabled(p_active_);
 
   stop_button_->setMinimumSize(50, 50);
   stop_button_->setMaximumSize(50, 50);
-  stop_button_->setEnabled(false);
+  stop_button_->setCheckable(true);
+  stop_button_->setEnabled(p_active_ && !p_stopped_);
+  stop_button_->setChecked(p_stopped_ && !p_paused_);
   stop_button_->setIcon(QIcon("/home/ksis/catkin_ws/src/mrop_gui/resources/stop.png"));
   stop_button_->setIconSize(QSize(25, 25));
 
   pause_button_->setMinimumSize(50, 50);
   pause_button_->setMaximumSize(50, 50);
-  pause_button_->setEnabled(false);
-  pause_button_->setIcon(QIcon("home/ksis/catkin_ws/src/mrop_gui/resources/pause.png"));
+  pause_button_->setCheckable(true);
+  pause_button_->setEnabled(p_active_ && !p_paused_);
+  pause_button_->setChecked(p_paused_ && !p_stopped_);
+  pause_button_->setIcon(QIcon("/home/ksis/catkin_ws/src/mrop_gui/resources/pause.png"));
   pause_button_->setIconSize(QSize(25, 25));
 
   play_button_->setMinimumSize(50, 50);
   play_button_->setMaximumSize(50, 50);
-  play_button_->setEnabled(false);
-  play_button_->setIcon(QIcon("home/ksis/catkin_ws/src/mrop_gui/resources/play.png"));
+  play_button_->setCheckable(true);
+  play_button_->setEnabled(p_active_ && (p_stopped_ || p_paused_));
+  play_button_->setChecked(!p_paused_ && !p_stopped_);
+  play_button_->setIcon(QIcon("/home/ksis/catkin_ws/src/mrop_gui/resources/play.png"));
   play_button_->setIconSize(QSize(25, 25));
 
   QSpacerItem* margin = new QSpacerItem(1, 1, QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -84,27 +90,20 @@ ReferenceGeneratorPanel::ReferenceGeneratorPanel(QWidget* parent) : rviz::Panel(
   trajectories_list_->addItem("Linear");
   trajectories_list_->addItem("Harmonic");
   trajectories_list_->addItem("Lemniscate");
-  trajectories_list_->setEnabled(false);
+  trajectories_list_->setEnabled(p_active_);
+  trajectories_list_->setCurrentIndex(p_trajectory_type_);
 
-  x_input_ = new QLineEdit("0.0");
-  y_input_ = new QLineEdit("0.0");
-  theta_input_ = new QLineEdit("0.0");
-  v_input_ = new QLineEdit("0.1");
-  T_input_ = new QLineEdit("5.0");
-  Rx_input_ = new QLineEdit("1.0");
-  Ry_input_ = new QLineEdit("1.0");
-  nx_input_ = new QLineEdit("1.0");
-  ny_input_ = new QLineEdit("2.0");
+  x_input_ = new QLineEdit(QString::number(p_x_0_));
+  y_input_ = new QLineEdit(QString::number(p_y_0_));
+  theta_input_ = new QLineEdit(QString::number(p_theta_0_));
+  v_input_ = new QLineEdit(QString::number(p_v_));
+  T_input_ = new QLineEdit(QString::number(p_T_));
+  r_x_input_ = new QLineEdit(QString::number(p_r_x_));
+  r_y_input_ = new QLineEdit(QString::number(p_r_y_));
+  n_x_input_ = new QLineEdit(QString::number(p_n_x_));
+  n_y_input_ = new QLineEdit(QString::number(p_n_y_));
 
-  x_input_->setEnabled(false);
-  y_input_->setEnabled(false);
-  theta_input_->setEnabled(false);
-  v_input_->setEnabled(false);
-  T_input_->setEnabled(false);
-  Rx_input_->setEnabled(false);
-  Ry_input_->setEnabled(false);
-  nx_input_->setEnabled(false);
-  ny_input_->setEnabled(false);
+  chooseTrajectoryParams(p_trajectory_type_);
 
   QString theta = QChar(0x03B8);
 
@@ -126,10 +125,10 @@ ReferenceGeneratorPanel::ReferenceGeneratorPanel(QWidget* parent) : rviz::Panel(
   inputs_layout->addWidget(v_input_, 1, 2);
   inputs_layout->addWidget(new QLabel("m/s, "), 1, 3);
   inputs_layout->addWidget(new QLabel("n<sub>x</sub>:"), 1, 4);
-  inputs_layout->addWidget(nx_input_, 1, 5);
+  inputs_layout->addWidget(n_x_input_, 1, 5);
   inputs_layout->addWidget(new QLabel("-, "), 1, 6);
   inputs_layout->addWidget(new QLabel("n<sub>y</sub>:"), 1, 7);
-  inputs_layout->addWidget(ny_input_, 1, 8);
+  inputs_layout->addWidget(n_y_input_, 1, 8);
   inputs_layout->addWidget(new QLabel("-"), 1, 9);
   inputs_layout->addItem(margin, 1, 10);
   //
@@ -137,11 +136,11 @@ ReferenceGeneratorPanel::ReferenceGeneratorPanel(QWidget* parent) : rviz::Panel(
   inputs_layout->addWidget(new QLabel("T:"), 2, 1);
   inputs_layout->addWidget(T_input_, 2, 2);
   inputs_layout->addWidget(new QLabel("s, "), 2, 3);
-  inputs_layout->addWidget(new QLabel("R<sub>x</sub>:"), 2, 4);
-  inputs_layout->addWidget(Rx_input_, 2, 5);
+  inputs_layout->addWidget(new QLabel("r<sub>x</sub>:"), 2, 4);
+  inputs_layout->addWidget(r_x_input_, 2, 5);
   inputs_layout->addWidget(new QLabel("m, "), 2, 6);
-  inputs_layout->addWidget(new QLabel("R<sub>y</sub>:"), 2, 7);
-  inputs_layout->addWidget(Ry_input_, 2, 8);
+  inputs_layout->addWidget(new QLabel("r<sub>y</sub>:"), 2, 7);
+  inputs_layout->addWidget(r_y_input_, 2, 8);
   inputs_layout->addWidget(new QLabel("m"), 2, 9);
   inputs_layout->addItem(margin, 2, 10);
 
@@ -158,170 +157,220 @@ ReferenceGeneratorPanel::ReferenceGeneratorPanel(QWidget* parent) : rviz::Panel(
   connect(stop_button_, SIGNAL(clicked()), this, SLOT(stop()));
   connect(pause_button_, SIGNAL(clicked()), this, SLOT(pause()));
   connect(play_button_, SIGNAL(clicked()), this, SLOT(start()));
-  connect(set_button_, SIGNAL(clicked()), this, SLOT(updateParams()));
-  connect(trajectories_list_, SIGNAL(activated(QString)), this, SLOT(chooseTrajectory(QString)));
+  connect(set_button_, SIGNAL(clicked()), this, SLOT(setParamsButton()));
+  connect(trajectories_list_, SIGNAL(activated(int)), this, SLOT(chooseTrajectoryParams(int)));
 }
 
 void ReferenceGeneratorPanel::trigger(bool checked) {
-  std_srvs::Trigger trigger;
+  p_active_ = checked;
+  setParams();
 
-  if (trigger_cli_.call(trigger)) {
-    if (trigger.response.success) {
-      stop_button_->setEnabled(true);
-      pause_button_->setEnabled(true);
-      play_button_->setEnabled(true);
-      set_button_->setEnabled(true);
-      trajectories_list_->setEnabled(true);
+  if (notifyParamsUpdate() && p_active_) {
+    stop_button_->setEnabled(p_active_ && !p_stopped_);
+    pause_button_->setEnabled(p_active_ && !p_paused_);
+    play_button_->setEnabled(p_active_ && (p_stopped_ || p_paused_));
+    set_button_->setEnabled(true);
+    trajectories_list_->setEnabled(true);
 
-      QString traj_type = trajectories_list_->currentText();
-      chooseTrajectory(traj_type);
-    }
-    else {
-      stop_button_->setEnabled(false);
-      pause_button_->setEnabled(false);
-      play_button_->setEnabled(false);
-      set_button_->setEnabled(false);
-      trajectories_list_->setEnabled(false);
-
-      x_input_->setEnabled(false);
-      y_input_->setEnabled(false);
-      theta_input_->setEnabled(false);
-      v_input_->setEnabled(false);
-      T_input_->setEnabled(false);
-      Rx_input_->setEnabled(false);
-      Ry_input_->setEnabled(false);
-      nx_input_->setEnabled(false);
-      ny_input_->setEnabled(false);
-    }
+    chooseTrajectoryParams(p_trajectory_type_);
   }
   else {
-    activate_checkbox_->setChecked(!checked);
+    stop_button_->setEnabled(false);
+    pause_button_->setEnabled(false);
+    play_button_->setEnabled(false);
+    set_button_->setEnabled(false);
+    trajectories_list_->setEnabled(false);
+
+    chooseTrajectoryParams(-1);
+
+    activate_checkbox_->setChecked(false);
+    p_active_ = false;
+    setParams();
   }
 }
 
-void ReferenceGeneratorPanel::updateParams() {
-//  mtracker::Params params;
-//  params.request.params.resize(13, 0);
+void ReferenceGeneratorPanel::setParamsButton() {
+  setParams();
+  notifyParamsUpdate();
+}
 
-//  stop_button_->setEnabled(false);
-//  pause_button_->setEnabled(true);
-//  play_button_->setEnabled(true);
+void ReferenceGeneratorPanel::setParams() {
+  verifyInputs();
 
-//  params.request.params[2] = 1.0;   // Update traj. params
+  nh_local_.setParam("active", p_active_);
+  nh_local_.setParam("trajectory_paused", p_paused_);
+  nh_local_.setParam("trajectory_stopped", p_stopped_);
 
-//  QString traj_type = trajectories_list_->currentText();
-//  if (traj_type == "Point")
-//    params.request.params[3] = 0.0;
-//  else if (traj_type == "Linear")
-//    params.request.params[3] = 1.0;
-//  else if (traj_type == "Harmonic")
-//    params.request.params[3] = 2.0;
-//  else if (traj_type == "Lemniscate")
-//    params.request.params[3] = 3.0;
+  nh_local_.setParam("trajectory_type", p_trajectory_type_);
 
-//  try {params.request.params[4] = boost::lexical_cast<double>(x_input_->text().toStdString()); }
-//  catch(boost::bad_lexical_cast &){ x_input_->setText(":-("); return; }
+  nh_local_.setParam("initial_x", p_x_0_);
+  nh_local_.setParam("initial_y", p_y_0_);
+  nh_local_.setParam("initial_theta", p_theta_0_);
+  nh_local_.setParam("linear_velocity", p_v_);
+  nh_local_.setParam("harmonic_period", p_T_);
+  nh_local_.setParam("harmonic_radius_x", p_r_x_);
+  nh_local_.setParam("harmonic_radius_y", p_r_y_);
+  nh_local_.setParam("harmonic_multiplier_x", p_n_x_);
+  nh_local_.setParam("harmonic_multiplier_y", p_n_y_);
+}
 
-//  try {params.request.params[5] = boost::lexical_cast<double>(y_input_->text().toStdString()); }
-//  catch(boost::bad_lexical_cast &){ y_input_->setText(":-("); return; }
+void ReferenceGeneratorPanel::getParams() {
+  nh_local_.param<bool>("active", p_active_, false);
+  nh_local_.param<bool>("trajectory_paused", p_paused_, false);
+  nh_local_.param<bool>("trajectory_stopped", p_stopped_, true);
 
-//  try {params.request.params[6] = boost::lexical_cast<double>(theta_input_->text().toStdString()); }
-//  catch(boost::bad_lexical_cast &){ theta_input_->setText(":-("); return; }
+  nh_local_.param<int>("trajectory_type", p_trajectory_type_, 0);
 
-//  try {params.request.params[7] = boost::lexical_cast<double>(v_input_->text().toStdString()); }
-//  catch(boost::bad_lexical_cast &){ v_input_->setText(":-("); return; }
+  nh_local_.param<double>("initial_x", p_x_0_, 0.0);
+  nh_local_.param<double>("initial_y", p_y_0_, 0.0);
+  nh_local_.param<double>("initial_theta", p_theta_0_, 0.0);
+  nh_local_.param<double>("linear_velocity", p_v_, 0.0);
+  nh_local_.param<double>("harmonic_period", p_T_, 0.0);
+  nh_local_.param<double>("harmonic_radius_x", p_r_x_, 0.0);
+  nh_local_.param<double>("harmonic_radius_y", p_r_y_, 0.0);
+  nh_local_.param<double>("harmonic_multiplier_x", p_n_x_, 1.0);
+  nh_local_.param<double>("harmonic_multiplier_y", p_n_y_, 1.0);
+}
 
-//  try {params.request.params[8] = boost::lexical_cast<double>(T_input_->text().toStdString()); }
-//  catch(boost::bad_lexical_cast &){ T_input_->setText(":-("); return; }
+bool ReferenceGeneratorPanel::notifyParamsUpdate() {
+  std_srvs::Empty empty;
+  return params_cli_.call(empty);
+}
 
-//  try {params.request.params[9] = boost::lexical_cast<double>(Rx_input_->text().toStdString()); }
-//  catch(boost::bad_lexical_cast &){ Rx_input_->setText(":-("); return; }
+bool ReferenceGeneratorPanel::verifyInputs() {
+  p_trajectory_type_ = trajectories_list_->currentIndex();
 
-//  try {params.request.params[10] = boost::lexical_cast<double>(Ry_input_->text().toStdString()); }
-//  catch(boost::bad_lexical_cast &){ Ry_input_->setText(":-("); return; }
+  try { p_x_0_ = boost::lexical_cast<double>(x_input_->text().toStdString()); }
+  catch(boost::bad_lexical_cast &) { p_x_0_ = 0.0; x_input_->setText("0.0"); return false; }
 
-//  try {params.request.params[11] = boost::lexical_cast<double>(nx_input_->text().toStdString()); }
-//  catch(boost::bad_lexical_cast &){ nx_input_->setText(":-("); return; }
+  try { p_y_0_ = boost::lexical_cast<double>(y_input_->text().toStdString()); }
+  catch(boost::bad_lexical_cast &) { p_y_0_ = 0.0; y_input_->setText("0.0"); return false; }
 
-//  try {params.request.params[12] = boost::lexical_cast<double>(ny_input_->text().toStdString()); }
-//  catch(boost::bad_lexical_cast &){ ny_input_->setText(":-("); return; }
+  try { p_theta_0_ = boost::lexical_cast<double>(theta_input_->text().toStdString()); }
+  catch(boost::bad_lexical_cast &) { p_theta_0_ = 0.0; theta_input_->setText("0.0"); return false; }
 
-//  params_cli_.call(params);
+  try { p_v_ = boost::lexical_cast<double>(v_input_->text().toStdString()); }
+  catch(boost::bad_lexical_cast &) { p_v_ = 0.0; v_input_->setText("0.0"); return false; }
+
+  try { p_T_ = boost::lexical_cast<double>(T_input_->text().toStdString()); }
+  catch(boost::bad_lexical_cast &) { p_T_ = 0.0; T_input_->setText("0.0"); return false; }
+
+  try { p_r_x_ = boost::lexical_cast<double>(r_x_input_->text().toStdString()); }
+  catch(boost::bad_lexical_cast &) { p_r_x_ = 0.0; r_x_input_->setText("0.0"); return false; }
+
+  try { p_r_y_ = boost::lexical_cast<double>(r_y_input_->text().toStdString()); }
+  catch(boost::bad_lexical_cast &) { p_r_y_ = 0.0; r_y_input_->setText("0.0"); return false; }
+
+  try { p_n_x_ = boost::lexical_cast<double>(n_x_input_->text().toStdString()); }
+  catch(boost::bad_lexical_cast &) { p_n_x_ = 0.0; n_x_input_->setText("0.0"); return false; }
+
+  try { p_n_y_ = boost::lexical_cast<double>(n_y_input_->text().toStdString()); }
+  catch(boost::bad_lexical_cast &) { p_n_y_ = 0.0; n_y_input_->setText("0.0"); return false; }
+
+  return true;
 }
 
 void ReferenceGeneratorPanel::stop() {
-//  mtracker::Params params;
-//  params.request.params.resize(13, 0);
-//  params.request.params[0] = 0.0; // start = false
-//  params.request.params[1] = 0.0; // pause = false
+  p_paused_ = false;
+  p_stopped_ = true;
 
-//  if (params_cli_.call(params)) {
-//    stop_button_->setEnabled(false);
-//    pause_button_->setEnabled(true);
-//    play_button_->setEnabled(true);
-//  }
+  stop_button_->setEnabled(false);
+  pause_button_->setEnabled(true);
+  play_button_->setEnabled(true);
+
+  stop_button_->setChecked(true);
+  pause_button_->setChecked(false);
+  play_button_->setChecked(false);
+
+  setParams();
+  notifyParamsUpdate();
 }
 
 void ReferenceGeneratorPanel::pause() {
-//  mtracker::Params params;
-//  params.request.params.resize(13, 0.0);
-//  params.request.params[0] = 0.0;
-//  params.request.params[1] = 1.0;
+  p_paused_ = true;
+  p_stopped_ = false;
 
-//  if (params_cli_.call(params)) {
-//    stop_button_->setEnabled(true);
-//    pause_button_->setEnabled(false);
-//    play_button_->setEnabled(true);
-//  }
+  stop_button_->setEnabled(true);
+  pause_button_->setEnabled(false);
+  play_button_->setEnabled(true);
+
+  stop_button_->setChecked(false);
+  pause_button_->setChecked(true);
+  play_button_->setChecked(false);
+
+  setParams();
+  notifyParamsUpdate();
 }
 
 void ReferenceGeneratorPanel::start() {
-//  mtracker::Params params;
-//  params.request.params.resize(13, 0.0);
-//  params.request.params[0] = 1.0;
-//  params.request.params[1] = 0.0;
+  p_paused_ = false;
+  p_stopped_ = false;
 
+  stop_button_->setEnabled(true);
+  pause_button_->setEnabled(true);
+  play_button_->setEnabled(false);
 
-//  if (params_cli_.call(params)) {
-//    stop_button_->setEnabled(true);
-//    pause_button_->setEnabled(true);
-//    play_button_->setEnabled(false);
-//  }
+  stop_button_->setChecked(false);
+  pause_button_->setChecked(false);
+  play_button_->setChecked(true);
+
+  setParams();
+  notifyParamsUpdate();
 }
 
-void ReferenceGeneratorPanel::chooseTrajectory(QString traj_type) {
-  if (traj_type == "Point") {
+void ReferenceGeneratorPanel::chooseTrajectoryParams(int index) {
+  switch (index) {
+  // Point
+  case 0:
     x_input_->setEnabled(true);
     y_input_->setEnabled(true);
     theta_input_->setEnabled(true);
     v_input_->setEnabled(false);
     T_input_->setEnabled(false);
-    Rx_input_->setEnabled(false);
-    Ry_input_->setEnabled(false);
-    nx_input_->setEnabled(false);
-    ny_input_->setEnabled(false);
-  }
-  else if (traj_type == "Linear") {
+    r_x_input_->setEnabled(false);
+    r_y_input_->setEnabled(false);
+    n_x_input_->setEnabled(false);
+    n_y_input_->setEnabled(false);
+    break;
+
+  // Linear
+  case 1:
     x_input_->setEnabled(true);
     y_input_->setEnabled(true);
     theta_input_->setEnabled(true);
     v_input_->setEnabled(true);
     T_input_->setEnabled(false);
-    Rx_input_->setEnabled(false);
-    Ry_input_->setEnabled(false);
-    nx_input_->setEnabled(false);
-    ny_input_->setEnabled(false);
-  }
-  else if (traj_type == "Harmonic" || traj_type == "Lemniscate") {
+    r_x_input_->setEnabled(false);
+    r_y_input_->setEnabled(false);
+    n_x_input_->setEnabled(false);
+    n_y_input_->setEnabled(false);
+    break;
+
+  // Harmonic and Lemniscate
+  case 2:
+  case 3:
     x_input_->setEnabled(true);
     y_input_->setEnabled(true);
     theta_input_->setEnabled(false);
     v_input_->setEnabled(false);
     T_input_->setEnabled(true);
-    Rx_input_->setEnabled(true);
-    Ry_input_->setEnabled(true);
-    nx_input_->setEnabled(true);
-    ny_input_->setEnabled(true);
+    r_x_input_->setEnabled(true);
+    r_y_input_->setEnabled(true);
+    n_x_input_->setEnabled(true);
+    n_y_input_->setEnabled(true);
+    break;
+
+  default:
+    x_input_->setEnabled(false);
+    y_input_->setEnabled(false);
+    theta_input_->setEnabled(false);
+    v_input_->setEnabled(false);
+    T_input_->setEnabled(false);
+    r_x_input_->setEnabled(false);
+    r_y_input_->setEnabled(false);
+    n_x_input_->setEnabled(false);
+    n_y_input_->setEnabled(false);
+    break;
   }
 }
 

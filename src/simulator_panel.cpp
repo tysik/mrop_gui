@@ -77,7 +77,7 @@ void SimulatorPanel::trigger(bool checked) {
   p_active_ = checked;
   setParams();
 
-  if (p_active_ && notifyParamsUpdate()) {
+  if (notifyParamsUpdate() && p_active_) {
     t_f_input_->setEnabled(true);
     t_o_input_->setEnabled(true);
     set_button_->setEnabled(true);
@@ -105,10 +105,6 @@ void SimulatorPanel::setParams() {
   nh_local_.setParam("active", p_active_);
   nh_local_.setParam("time_constant", p_time_constant_);
   nh_local_.setParam("time_delay", p_time_delay_);
-
-  nh_local_.setParam("initial_x", p_initial_x_);
-  nh_local_.setParam("initial_y", p_initial_y_);
-  nh_local_.setParam("initial_theta", p_initial_theta_);
 }
 
 void SimulatorPanel::getParams() {
@@ -116,10 +112,6 @@ void SimulatorPanel::getParams() {
 
   nh_local_.param<double>("time_constant", p_time_constant_, 0.0);
   nh_local_.param<double>("time_delay", p_time_delay_, 0.0);
-
-  nh_local_.param<double>("initial_x", p_initial_x_, 0.0);
-  nh_local_.param<double>("initial_y", p_initial_y_, 0.0);
-  nh_local_.param<double>("initial_theta", p_initial_theta_, 0.0);
 }
 
 bool SimulatorPanel::notifyParamsUpdate() {

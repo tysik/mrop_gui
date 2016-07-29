@@ -44,28 +44,32 @@ ManualControllerPanel::ManualControllerPanel(QWidget* parent) : rviz::Panel(pare
   params_cli_ = nh_local_.serviceClient<std_srvs::Empty>("params");
   keys_pub_ = nh_.advertise<geometry_msgs::Twist>("keys", 10);
 
-  std::fill_n(keys_, 4, 0.0);
+  std::fill_n(keys_, 6, 0);
 
   activate_checkbox_ = new QCheckBox("On/Off");
   activate_checkbox_->setChecked(p_active_);
 
   joy_button_   = new QPushButton("Joy");
   keys_button_  = new QPushButton("Keys");
-  up_button_    = new QPushButton("W");
   left_button_  = new QPushButton("A");
-  down_button_  = new QPushButton("S");
   right_button_ = new QPushButton("D");
+  up_button_    = new QPushButton("W");
+  down_button_  = new QPushButton("S");
+  rot_left_button_  = new QPushButton("Q");
+  rot_right_button_ = new QPushButton("E");
   set_button_   = new QPushButton("Set");
 
   joy_button_->setCheckable(true);
   joy_button_->setMinimumSize(50, 50);
   joy_button_->setMaximumSize(50, 50);
   joy_button_->setEnabled(p_active_ && p_use_joy_);
+  joy_button_->setChecked(p_active_ && p_use_joy_);
 
   keys_button_->setCheckable(true);
   keys_button_->setMinimumSize(50, 50);
   keys_button_->setMaximumSize(50, 50);
   keys_button_->setEnabled(p_active_ && p_use_keys_);
+  keys_button_->setChecked(p_active_ && p_use_keys_);
 
   up_button_->setMinimumSize(50, 50);
   up_button_->setMaximumSize(50, 50);
@@ -83,6 +87,14 @@ ManualControllerPanel::ManualControllerPanel(QWidget* parent) : rviz::Panel(pare
   right_button_->setMaximumSize(50, 50);
   right_button_->setEnabled(p_active_ && p_use_keys_);
 
+  rot_left_button_->setMinimumSize(50, 50);
+  rot_left_button_->setMaximumSize(50, 50);
+  rot_left_button_->setEnabled(p_active_ && p_use_keys_);
+
+  rot_right_button_->setMinimumSize(50, 50);
+  rot_right_button_->setMaximumSize(50, 50);
+  rot_right_button_->setEnabled(p_active_ && p_use_keys_);
+
   set_button_->setEnabled(p_active_);
 
   k_v_input_ = new QLineEdit(QString::number(p_linear_gain_));
@@ -95,10 +107,17 @@ ManualControllerPanel::ManualControllerPanel(QWidget* parent) : rviz::Panel(pare
 
   QGridLayout* buttons_layout = new QGridLayout;
   buttons_layout->addItem(margin, 0, 0, 2, 1);
+
   buttons_layout->addWidget(joy_button_, 0, 1, Qt::AlignLeft);
+
+  buttons_layout->addWidget(rot_left_button_, 0, 2, Qt::AlignRight);
   buttons_layout->addWidget(up_button_, 0, 3, Qt::AlignCenter);
+  buttons_layout->addWidget(rot_right_button_, 0, 4, Qt::AlignLeft);
+
   buttons_layout->addWidget(keys_button_, 0, 5, Qt::AlignRight);
+
   buttons_layout->addItem(margin, 0, 6, 2, 1);
+
   buttons_layout->addWidget(left_button_, 1, 2, Qt::AlignRight);
   buttons_layout->addWidget(down_button_, 1, 3, Qt::AlignCenter);
   buttons_layout->addWidget(right_button_, 1, 4, Qt::AlignLeft);
@@ -129,7 +148,10 @@ void ManualControllerPanel::trigger(bool checked) {
   p_active_ = checked;
   setParams();
 
-  if (p_active_ && notifyParamsUpdate()) {
+  if (!p_active_)
+    keys_pub_.publish(geometry_msgs::Twist());
+
+  if (notifyParamsUpdate() && p_active_) {
     joy_button_->setEnabled(true);
     keys_button_->setEnabled(true);
     set_button_->setEnabled(true);
@@ -145,6 +167,8 @@ void ManualControllerPanel::trigger(bool checked) {
       down_button_->setEnabled(true);
       left_button_->setEnabled(true);
       right_button_->setEnabled(true);
+      rot_left_button_->setEnabled(true);
+      rot_right_button_->setEnabled(true);
     }
   }
   else {
@@ -155,11 +179,12 @@ void ManualControllerPanel::trigger(bool checked) {
     down_button_->setEnabled(false);
     left_button_->setEnabled(false);
     right_button_->setEnabled(false);
+    rot_left_button_->setEnabled(false);
+    rot_right_button_->setEnabled(false);
     k_v_input_->setEnabled(false);
     k_w_input_->setEnabled(false);
 
-    std::fill_n(keys_, 4, 0.0);
-    keys_pub_.publish(geometry_msgs::Twist());
+    std::fill_n(keys_, 6, 0.0);
     activate_checkbox_->setChecked(false);
     p_active_ = false;
     setParams();
@@ -186,14 +211,18 @@ void ManualControllerPanel::switchKeys(bool checked) {
     down_button_->setEnabled(true);
     left_button_->setEnabled(true);
     right_button_->setEnabled(true);
+    rot_left_button_->setEnabled(true);
+    rot_right_button_->setEnabled(true);
   }
   else {
     up_button_->setEnabled(false);
     down_button_->setEnabled(false);
     left_button_->setEnabled(false);
     right_button_->setEnabled(false);
+    rot_left_button_->setEnabled(false);
+    rot_right_button_->setEnabled(false);
 
-    std::fill_n(keys_, 4, 0.0);
+    std::fill_n(keys_, 6, 0);
     keys_pub_.publish(geometry_msgs::Twist());
   }
 
@@ -244,21 +273,30 @@ void ManualControllerPanel::keyPressEvent(QKeyEvent * e) {
       up_button_->setDown(true);
       keys_[0] = 1;
     }
-    if (e->key() == Qt::Key_A || e->key() == Qt::Key_Left) {
-      left_button_->setDown(true);
-      keys_[1] = 1;
-    }
     if (e->key() == Qt::Key_S || e->key() == Qt::Key_Down) {
       down_button_->setDown(true);
+      keys_[1] = 1;
+    }
+    if (e->key() == Qt::Key_A || e->key() == Qt::Key_Left) {
+      left_button_->setDown(true);
       keys_[2] = 1;
     }
     if (e->key() == Qt::Key_D || e->key() == Qt::Key_Right) {
       right_button_->setDown(true);
       keys_[3] = 1;
     }
+    if (e->key() == Qt::Key_Q || e->key() == Qt::Key_Delete) {
+      rot_left_button_->setDown(true);
+      keys_[4] = 1;
+    }
+    if (e->key() == Qt::Key_E || e->key() == Qt::Key_PageDown) {
+      rot_right_button_->setDown(true);
+      keys_[5] = 1;
+    }
 
-    keys.linear.x = keys_[0] - keys_[2];
-    keys.angular.z = keys_[1] - keys_[3];
+    keys.linear.x = keys_[0] - keys_[1];
+    keys.linear.y = keys_[2] - keys_[3];
+    keys.angular.z = keys_[4] - keys_[5];
 
     keys_pub_.publish(keys);
   }
@@ -272,21 +310,30 @@ void ManualControllerPanel::keyReleaseEvent(QKeyEvent * e) {
       up_button_->setDown(false);
       keys_[0] = 0;
     }
-    if (e->key() == Qt::Key_A || e->key() == Qt::Key_Left) {
-      left_button_->setDown(false);
-      keys_[1] = 0;
-    }
     if (e->key() == Qt::Key_S || e->key() == Qt::Key_Down) {
       down_button_->setDown(false);
+      keys_[1] = 0;
+    }
+    if (e->key() == Qt::Key_A || e->key() == Qt::Key_Left) {
+      left_button_->setDown(false);
       keys_[2] = 0;
     }
     if (e->key() == Qt::Key_D || e->key() == Qt::Key_Right) {
       right_button_->setDown(false);
       keys_[3] = 0;
     }
+    if (e->key() == Qt::Key_Q || e->key() == Qt::Key_Delete) {
+      rot_left_button_->setDown(false);
+      keys_[4] = 0;
+    }
+    if (e->key() == Qt::Key_E || e->key() == Qt::Key_PageDown) {
+      rot_right_button_->setDown(false);
+      keys_[5] = 0;
+    }
 
-    keys.linear.x = keys_[0] - keys_[2];
-    keys.angular.z = keys_[1] - keys_[3];
+    keys.linear.x = keys_[0] - keys_[1];
+    keys.linear.y = keys_[2] - keys_[3];
+    keys.angular.z = keys_[4] - keys_[5];
 
     keys_pub_.publish(keys);
   }

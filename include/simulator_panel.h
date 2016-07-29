@@ -88,10 +88,6 @@ private:
   double p_sampling_time_;
   double p_time_constant_;
   double p_time_delay_;
-
-  double p_initial_x_;
-  double p_initial_y_;
-  double p_initial_theta_;
 };
 
 } // end namespace mrop_gui
